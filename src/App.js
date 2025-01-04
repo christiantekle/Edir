@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import UserList from './components/UserList';
+import React from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import UserList from "./components/UserList";
 
 const App = () => {
   return (
@@ -9,6 +9,6 @@ const App = () => {
       <UserList />
     </div>
   );
-}
+};
 
 export default App;
