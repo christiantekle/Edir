@@ -84,17 +84,16 @@ const UserList = () => {
   const confirmAndPay = async (user, amount) => {
     if (
       window.confirm(
-        `Are you sure you want to add $${amount} to ${user.firstName}'s total?`
+        `Are you sure you want to add ${amount}€ to ${user.firstName}'s total?`
       )
     ) {
-      const updatedTotal = user.totalAmountPaid + amount;
+      const updatedTotal = user.totalAmountPaid + amount; // Calculate the new total amount
 
       // Update the user in Supabase
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("users")
         .update({ totalAmountPaid: updatedTotal })
         .eq("id", user.id); // Use the "id" column from your Supabase database schema
-
       if (error) {
         console.error("Error updating user", error);
         alert("Error updating user. Please try again.");
