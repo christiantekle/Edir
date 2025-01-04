@@ -27,3 +27,18 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Dependency directories
+node_modules/
+
+# Optional: Ignore package-lock.json (if you don't want it tracked)
+package-lock.json
+
+# Build files and directories
+dist/
+build/
+.next/
+
+# Environment variables
+.env
+.env.*
