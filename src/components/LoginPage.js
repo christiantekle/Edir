@@ -33,34 +33,60 @@ const LoginPage = ({ onLogin }) => {
   };
 
   return (
-    <div className="container mt-5">
-      <h2>Login</h2>
-      {error && <div className="alert alert-danger">{error}</div>}
-      <div className="mb-3">
-        <input
-          type="email"
-          placeholder="Email"
-          value="{email}"
-          onChange={(e) => setEmail(e.target.value)}
-          className="form-control"
-        />
-      </div>
-      <div className="mb-3">
-        <input
-          type="password"
-          placeholder="Password"
-          value="{password}"
-          onChange={(e) => setPassword(e.target.value)}
-          className="form-control"
-        />
-      </div>
-      <div className="d-flex gap-2">
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="btn btn-primary"
-        />
-        {loading ? "Loading..." : "Login"}
+    <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
+      <div
+        className="card p-4 shadow-sm"
+        style={{ maxWidth: "400px", width: "100%" }}
+      >
+        <h2 className="text-center mb-4">Login</h2>
+        {error && (
+          <div className="alert alert-danger mb-4" role="alert">
+            {error}
+          </div>
+        )}
+        <form>
+          <div className="mb-3">
+            <input
+              type="email"
+              className="form-control"
+              placeholder="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <input
+              type="password"
+              className="form-control"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="d-grid gap-2">
+            <button
+              type="button"
+              onClick={handleLogin}
+              disabled={loading}
+              className="btn btn-primary btn-lg"
+            >
+              {loading ? (
+                <>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Loading...
+                </>
+              ) : (
+                "Login"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

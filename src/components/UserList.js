@@ -19,6 +19,37 @@ const UserList = () => {
     firstName: "",
     lastName: "",
     phoneNumber: "",
+    userType: "single",
+    monthsPaid: {
+      [2024]: {
+        January: false,
+        February: false,
+        March: false,
+        April: false,
+        May: false,
+        June: false,
+        July: false,
+        August: false,
+        September: false,
+        October: false,
+        November: false,
+        December: false,
+      },
+      [2025]: {
+        January: false,
+        February: false,
+        March: false,
+        April: false,
+        May: false,
+        June: false,
+        July: false,
+        August: false,
+        September: false,
+        October: false,
+        November: false,
+        December: false,
+      },
+    },
     totalAmountPaid: 0,
   });
 
@@ -81,7 +112,7 @@ const UserList = () => {
     }
   };
 
-  const confirmAndPay = async (user, amount) => {
+  /* const confirmAndPay = async (user, amount) => {
     if (
       window.confirm(
         `Are you sure you want to add ${amount}€ to ${user.firstName}'s total?`
@@ -105,7 +136,7 @@ const UserList = () => {
         setUsers(updatedUsers);
       }
     }
-  };
+  }; */
 
   const saveEdit = async () => {
     try {
@@ -141,6 +172,58 @@ const UserList = () => {
       user.totalAmountPaid.toString().includes(search)
     );
   });
+
+  const toggleMonthPayment = async (user, year, month) => {
+    // Clone the existing `monthsPaid` object for immutability
+    const updatedMonthsPaid = { ...user.monthsPaid };
+
+    // Ensure the year exists in the object
+    if (!updatedMonthsPaid[year]) updatedMonthsPaid[year] = {};
+
+    // Toggle the selected month's value
+    updatedMonthsPaid[year][month] = !updatedMonthsPaid[year][month];
+
+    // Calculate the new total based on the updated `monthsPaid`
+    const totalPaid = calculateTotal(updatedMonthsPaid, user.userType);
+
+    try {
+      // Update the user in the database
+      const { error } = await supabase
+        .from("users")
+        .update({ monthsPaid: updatedMonthsPaid, totalAmountPaid: totalPaid })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      // Update the local state
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? {
+                ...u,
+                monthsPaid: updatedMonthsPaid,
+                totalAmountPaid: totalPaid,
+              }
+            : u
+        )
+      );
+    } catch (err) {
+      console.error("Error updating payment status", err);
+      alert("Error updating payment status. Please try again.");
+    }
+  };
+
+  const calculateTotal = (monthsPaid, userType) => {
+    const monthlyRate = userType === "single" ? 7.5 : 10;
+    let total = 0;
+
+    Object.values(monthsPaid || {}).forEach((year) => {
+      Object.values(year || {}).forEach((isPaid) => {
+        if (isPaid) total += monthlyRate;
+      });
+    });
+    return total;
+  };
 
   const totalPaid = users.reduce((sum, user) => sum + user.totalAmountPaid, 0);
 
@@ -209,8 +292,48 @@ const UserList = () => {
                 <p>{user.totalAmountPaid}€</p>
               </div>
 
+              <div style={{ flex: 2 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(6, 1fr)", // Display 6 months per row
+                    gap: "0.5rem",
+                  }}
+                >
+                  {Object.entries(newUser.monthsPaid[2024] || {}).map(
+                    ([month, isPaid]) => (
+                      <span
+                        key={month}
+                        style={{
+                          padding: "0.25rem",
+                          margin: "0.25rem",
+                          backgroundColor: isPaid ? "green" : "red",
+                          color: "white",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                        }}
+                        onClick={() =>
+                          setNewUser((prev) => ({
+                            ...prev,
+                            monthsPaid: {
+                              ...prev.monthsPaid,
+                              2024: {
+                                ...prev.monthsPaid[2024],
+                                [month]: !prev.monthsPaid[2024][month],
+                              },
+                            },
+                          }))
+                        }
+                      >
+                        {month}
+                      </span>
+                    )
+                  )}
+                </div>
+              </div>
+
               {/* Add Payment */}
-              <div style={{ flex: 2 }} className="d-flex gap-2">
+              {/* <div style={{ flex: 2 }} className="d-flex gap-2">
                 <Button
                   variant="outline-success"
                   onClick={() => confirmAndPay(user, 20)}
@@ -223,7 +346,7 @@ const UserList = () => {
                 >
                   +50€
                 </Button>
-              </div>
+              </div> */}
 
               {/* Actions (Edit/Delete) */}
               <div style={{ flex: 1 }} className="d-flex gap-2">
@@ -275,6 +398,60 @@ const UserList = () => {
                 }
               />
             </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>User Type</Form.Label>
+              <Form.Select
+                value={newUser.userType}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, userType: e.target.value })
+                }
+              >
+                <option value="single">Single</option>
+                <option value="family">Family</option>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Months Paid</Form.Label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(6, 1fr)", // Display 6 months per row
+                  gap: "0.5rem", // Add space between items
+                }}
+              >
+                {Object.entries(newUser.monthsPaid[2024] || {}).map((month) => (
+                  <span
+                    key={month}
+                    style={{
+                      padding: "0.25rem",
+                      margin: "0.25rem",
+                      backgroundColor: newUser.monthsPaid[2024][month]
+                        ? "green"
+                        : "red",
+                      color: "white",
+                      borderRadius: "3px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() =>
+                      setNewUser((prev) => ({
+                        ...prev,
+                        monthsPaid: {
+                          ...prev.monthsPaid,
+                          2024: {
+                            ...prev.monthsPaid[2024],
+                            [month]: !prev.monthsPaid[2024][month],
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    {month}
+                  </span>
+                ))}
+              </div>
+            </Form.Group>
+
             <Form.Group className="mb-3">
               <Form.Label>Total Amount Paid</Form.Label>
               <Form.Control
