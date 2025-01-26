@@ -9,6 +9,27 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
+const generateMonthsPaid = (startYear, endYear) => {
+  const result = {};
+  for (let year = startYear; year <= endYear; year++) {
+    result[year] = {
+      January: false,
+      February: false,
+      March: false,
+      April: false,
+      May: false,
+      June: false,
+      July: false,
+      August: false,
+      September: false,
+      October: false,
+      November: false,
+      December: false,
+    };
+  }
+  return result;
+};
+
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [showEdit, setShowEdit] = useState(false); //show or hide the modal ----for edit
@@ -20,36 +41,7 @@ const UserList = () => {
     lastName: "",
     phoneNumber: "",
     userType: "single",
-    monthsPaid: {
-      [2024]: {
-        January: false,
-        February: false,
-        March: false,
-        April: false,
-        May: false,
-        June: false,
-        July: false,
-        August: false,
-        September: false,
-        October: false,
-        November: false,
-        December: false,
-      },
-      [2025]: {
-        January: false,
-        February: false,
-        March: false,
-        April: false,
-        May: false,
-        June: false,
-        July: false,
-        August: false,
-        September: false,
-        October: false,
-        November: false,
-        December: false,
-      },
-    },
+    monthsPaid: generateMonthsPaid(2024, 2030),
     totalAmountPaid: 0,
   });
 
@@ -295,37 +287,27 @@ const UserList = () => {
               <div style={{ flex: 2 }}>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(6, 1fr)", // Display 6 months per row
+                    display: "flex",
+                    flexWrap: "wrap",
                     gap: "0.5rem",
                   }}
                 >
-                  {Object.entries(newUser.monthsPaid[2024] || {}).map(
+                  {Object.entries(user.monthsPaid[2024] || {}).map(
                     ([month, isPaid]) => (
                       <span
                         key={month}
                         style={{
-                          padding: "0.25rem",
-                          margin: "0.25rem",
+                          padding: "0.2rem 0.5rem",
+                          margin: "0.2rem",
                           backgroundColor: isPaid ? "green" : "red",
                           color: "white",
                           borderRadius: "3px",
+                          fontSize: "0.8rem",
                           cursor: "pointer",
                         }}
-                        onClick={() =>
-                          setNewUser((prev) => ({
-                            ...prev,
-                            monthsPaid: {
-                              ...prev.monthsPaid,
-                              2024: {
-                                ...prev.monthsPaid[2024],
-                                [month]: !prev.monthsPaid[2024][month],
-                              },
-                            },
-                          }))
-                        }
+                        onClick={() => toggleMonthPayment(user, 2024, month)}
                       >
-                        {month}
+                        {month.slice(0, 3)} {/* Display short month name */}
                       </span>
                     )
                   )}
