@@ -36,6 +36,7 @@ const UserList = () => {
   const [showAdd, setShowAdd] = useState(false); //show or hide the modal --- to add a user
   const [currentUser, setCurrentUser] = useState(null); // being edited
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedYear, setExpandedYear] = useState(null); // Track the expanded year
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -44,6 +45,21 @@ const UserList = () => {
     monthsPaid: generateMonthsPaid(2024, 2030),
     totalAmountPaid: 0,
   });
+
+  const MONTHS_ORDER = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -273,64 +289,76 @@ const UserList = () => {
                   {user.firstName} {user.lastName}
                 </h5>
               </div>
-
               {/* User Phone */}
               <div style={{ flex: 1 }}>
                 <p>{user.phoneNumber}</p>
               </div>
-
               {/* User Total Amount */}
               <div style={{ flex: 1 }}>
                 <p>{user.totalAmountPaid}€</p>
               </div>
+              {/* Add Payment */}
 
               <div style={{ flex: 2 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "0.5rem",
-                  }}
-                >
-                  {Object.entries(user.monthsPaid[2024] || {}).map(
-                    ([month, isPaid]) => (
-                      <span
-                        key={month}
+                {/* Years */}
+                {["2024", "2025"].map((year) => (
+                  <div key={year} style={{ marginBottom: "1rem" }}>
+                    {/* Year Header */}
+                    <button
+                      onClick={() =>
+                        setExpandedYear((prevYear) =>
+                          prevYear === year ? null : year
+                        )
+                      }
+                      style={{
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        color: expandedYear === year ? "blue" : "black",
+                        textDecoration:
+                          expandedYear === year ? "underline" : "none",
+                      }}
+                    >
+                      {year}
+                    </button>
+
+                    {/* Months (Only show if the year is expanded) */}
+                    {expandedYear === year && (
+                      <div
                         style={{
-                          padding: "0.2rem 0.5rem",
-                          margin: "0.2rem",
-                          backgroundColor: isPaid ? "green" : "red",
-                          color: "white",
-                          borderRadius: "3px",
-                          fontSize: "0.8rem",
-                          cursor: "pointer",
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.5rem",
+                          marginTop: "0.5rem",
                         }}
-                        onClick={() => toggleMonthPayment(user, 2024, month)}
                       >
-                        {month.slice(0, 3)} {/* Display short month name */}
-                      </span>
-                    )
-                  )}
-                </div>
+                        {MONTHS_ORDER.map((month) => (
+                          <span
+                            key={month}
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              margin: "0.2rem",
+                              backgroundColor:
+                                user.monthsPaid[year]?.[month] === true
+                                  ? "green"
+                                  : "red",
+                              color: "white",
+                              borderRadius: "3px",
+                              fontSize: "0.8rem",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              toggleMonthPayment(user, year, month)
+                            }
+                          >
+                            {month.slice(0, 3)} {/* Short month name */}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
 
-              {/* Add Payment */}
-              {/* <div style={{ flex: 2 }} className="d-flex gap-2">
-                <Button
-                  variant="outline-success"
-                  onClick={() => confirmAndPay(user, 20)}
-                >
-                  +20€
-                </Button>
-                <Button
-                  variant="outline-success"
-                  onClick={() => confirmAndPay(user, 50)}
-                >
-                  +50€
-                </Button>
-              </div> */}
-
-              {/* Actions (Edit/Delete) */}
               <div style={{ flex: 1 }} className="d-flex gap-2">
                 <Button variant="warning" onClick={() => handleEdit(user)}>
                   <FaEdit />
