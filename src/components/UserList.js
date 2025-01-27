@@ -36,7 +36,7 @@ const UserList = () => {
   const [showAdd, setShowAdd] = useState(false); //show or hide the modal --- to add a user
   const [currentUser, setCurrentUser] = useState(null); // being edited
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedYear, setExpandedYear] = useState(null); // Track the expanded year
+  const [expandedYears, setExpandedYears] = useState({}); // Track the expanded year
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -77,17 +77,34 @@ const UserList = () => {
 
   const saveNewUser = async () => {
     try {
+      // Calculate the total amount paid based on the selected months
+      const totalPaid = calculateTotal(newUser.monthsPaid, newUser.userType);
+
+      // Add the total amount to the new user object
+      const userToSave = {
+        ...newUser,
+        totalAmountPaid: totalPaid,
+      };
+
+      // Save the user to the database
       const { data: insertedUser, error } = await supabase
         .from("users")
-        .insert([newUser])
+        .insert([userToSave])
         .select();
+
       if (error) throw error;
+
+      // Update the local state with the new user
       setUsers([...users, insertedUser[0]]);
+
+      // Reset the form and close the modal
       setShowAdd(false);
       setNewUser({
         firstName: "",
         lastName: "",
         phoneNumber: "",
+        userType: "single",
+        monthsPaid: generateMonthsPaid(2024, 2030), // Reset monthsPaid
         totalAmountPaid: 0,
       });
     } catch (err) {
@@ -119,32 +136,6 @@ const UserList = () => {
       }
     }
   };
-
-  /* const confirmAndPay = async (user, amount) => {
-    if (
-      window.confirm(
-        `Are you sure you want to add ${amount}€ to ${user.firstName}'s total?`
-      )
-    ) {
-      const updatedTotal = user.totalAmountPaid + amount; // Calculate the new total amount
-
-      // Update the user in Supabase
-      const { error } = await supabase
-        .from("users")
-        .update({ totalAmountPaid: updatedTotal })
-        .eq("id", user.id); // Use the "id" column from your Supabase database schema
-      if (error) {
-        console.error("Error updating user", error);
-        alert("Error updating user. Please try again.");
-      } else {
-        // Update state after successful update
-        const updatedUsers = users.map((u) =>
-          u.id === user.id ? { ...user, totalAmountPaid: updatedTotal } : u
-        );
-        setUsers(updatedUsers);
-      }
-    }
-  }; */
 
   const saveEdit = async () => {
     try {
@@ -230,6 +221,7 @@ const UserList = () => {
         if (isPaid) total += monthlyRate;
       });
     });
+
     return total;
   };
 
@@ -306,23 +298,33 @@ const UserList = () => {
                     {/* Year Header */}
                     <button
                       onClick={() =>
-                        setExpandedYear((prevYear) =>
-                          prevYear === year ? null : year
-                        )
+                        setExpandedYears((prev) => ({
+                          ...prev,
+                          [user.id]: prev[user.id] === year ? null : year, // Toggle year for this user
+                        }))
                       }
                       style={{
                         cursor: "pointer",
                         fontWeight: "bold",
-                        color: expandedYear === year ? "blue" : "black",
-                        textDecoration:
-                          expandedYear === year ? "underline" : "none",
+                        fontSize: "1rem",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "5px",
+                        border: "none",
+                        backgroundColor:
+                          expandedYears[user.id] === year
+                            ? "#0d6efd"
+                            : "#f8f9fa", // Bootstrap primary color
+                        color:
+                          expandedYears[user.id] === year ? "white" : "black",
+                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                        transition: "background-color 0.3s, color 0.3s",
                       }}
                     >
                       {year}
                     </button>
 
                     {/* Months (Only show if the year is expanded) */}
-                    {expandedYear === year && (
+                    {expandedYears[user.id] === year && (
                       <div
                         style={{
                           display: "flex",
@@ -350,7 +352,7 @@ const UserList = () => {
                               toggleMonthPayment(user, year, month)
                             }
                           >
-                            {month.slice(0, 3)} {/* Short month name */}
+                            {month.slice(0, 3)}
                           </span>
                         ))}
                       </div>
@@ -423,43 +425,87 @@ const UserList = () => {
 
             <Form.Group className="mb-3">
               <Form.Label>Months Paid</Form.Label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(6, 1fr)", // Display 6 months per row
-                  gap: "0.5rem", // Add space between items
-                }}
-              >
-                {Object.entries(newUser.monthsPaid[2024] || {}).map((month) => (
-                  <span
-                    key={month}
-                    style={{
-                      padding: "0.25rem",
-                      margin: "0.25rem",
-                      backgroundColor: newUser.monthsPaid[2024][month]
-                        ? "green"
-                        : "red",
-                      color: "white",
-                      borderRadius: "3px",
-                      cursor: "pointer",
-                    }}
+              {["2024", "2025"].map((year) => (
+                <div key={year} style={{ marginBottom: "1rem" }}>
+                  {/* Year Header */}
+                  <button
+                    type="button" // Prevent form submission
                     onClick={() =>
                       setNewUser((prev) => ({
                         ...prev,
                         monthsPaid: {
                           ...prev.monthsPaid,
-                          2024: {
-                            ...prev.monthsPaid[2024],
-                            [month]: !prev.monthsPaid[2024][month],
+                          [year]: prev.monthsPaid[year] || {
+                            January: false,
+                            February: false,
+                            March: false,
+                            April: false,
+                            May: false,
+                            June: false,
+                            July: false,
+                            August: false,
+                            September: false,
+                            October: false,
+                            November: false,
+                            December: false,
                           },
                         },
                       }))
                     }
+                    style={{
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      color: "black",
+                      textDecoration: "none",
+                      border: "none",
+                      background: "none",
+                    }}
                   >
-                    {month}
-                  </span>
-                ))}
-              </div>
+                    {year}
+                  </button>
+
+                  {/* Months Grid */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(6, 1fr)", // 6 months per row
+                      gap: "0.5rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    {MONTHS_ORDER.map((month) => (
+                      <span
+                        key={month}
+                        style={{
+                          padding: "0.25rem",
+                          margin: "0.25rem",
+                          backgroundColor:
+                            newUser.monthsPaid[year]?.[month] === true
+                              ? "green"
+                              : "red",
+                          color: "white",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                        }}
+                        onClick={() =>
+                          setNewUser((prev) => ({
+                            ...prev,
+                            monthsPaid: {
+                              ...prev.monthsPaid,
+                              [year]: {
+                                ...prev.monthsPaid[year],
+                                [month]: !prev.monthsPaid[year]?.[month],
+                              },
+                            },
+                          }))
+                        }
+                      >
+                        {month.slice(0, 3)} {/* Short month name */}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -483,7 +529,6 @@ const UserList = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-
       {/* Edit user */}
       <Modal show={showEdit} onHide={() => setShowEdit(false)}>
         <Modal.Header closeButton>

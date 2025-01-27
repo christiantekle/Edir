@@ -30,7 +30,21 @@ const App = () => {
     <div className="container mt-5">
       {user ? (
         <>
-          <h1 className="text-center">Hibret Be Geta</h1>
+          <h1
+            style={{
+              fontFamily: "'Poppins', sans-serif", // Use a modern font
+              fontSize: "2.5rem", // Larger font size
+              fontWeight: "600", // Semi-bold
+              color: "#00204f", // Bootstrap primary color
+              textAlign: "center", // Center the title
+              marginTop: "1rem", // Add some spacing
+              marginBottom: "1.5rem", // Add some spacing
+              textShadow: "2px 2px 4px rgba(0, 0, 0, 0.2)", // Subtle shadow
+              letterSpacing: "1px", // Slightly spaced letters
+            }}
+          >
+            Hibret Be Geta
+          </h1>
           <button className="btn btn-danger" onClick={handleLogout}>
             Logout
           </button>
