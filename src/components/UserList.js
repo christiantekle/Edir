@@ -183,16 +183,24 @@ const UserList = () => {
     if (!updatedMonthsPaid[year]) updatedMonthsPaid[year] = {};
 
     // Toggle the selected month's value
-    updatedMonthsPaid[year][month] = !updatedMonthsPaid[year][month];
+    const wasPaid = updatedMonthsPaid[year][month];
+    updatedMonthsPaid[year][month] = !wasPaid;
 
-    // Calculate the new total based on the updated `monthsPaid`
-    const totalPaid = calculateTotal(updatedMonthsPaid, user.userType);
+    // Calculate the change in total based on the toggled month
+    const monthlyRate = user.userType === "single" ? 7.5 : 10;
+    const change = wasPaid ? -monthlyRate : monthlyRate;
+
+    // Update the total amount paid
+    const updatedTotalAmountPaid = user.totalAmountPaid + change;
 
     try {
       // Update the user in the database
       const { error } = await supabase
         .from("users")
-        .update({ monthsPaid: updatedMonthsPaid, totalAmountPaid: totalPaid })
+        .update({
+          monthsPaid: updatedMonthsPaid,
+          totalAmountPaid: updatedTotalAmountPaid,
+        })
         .eq("id", user.id);
 
       if (error) throw error;
@@ -204,7 +212,7 @@ const UserList = () => {
             ? {
                 ...u,
                 monthsPaid: updatedMonthsPaid,
-                totalAmountPaid: totalPaid,
+                totalAmountPaid: updatedTotalAmountPaid,
               }
             : u
         )
