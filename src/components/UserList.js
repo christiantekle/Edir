@@ -80,10 +80,13 @@ const UserList = () => {
       // Calculate the total amount paid based on the selected months
       const totalPaid = calculateTotal(newUser.monthsPaid, newUser.userType);
 
+      // Add the manually entered amount to the calculated total
+      const finalTotalAmountPaid = (newUser.totalAmountPaid || 0) + totalPaid;
+
       // Add the total amount to the new user object
       const userToSave = {
         ...newUser,
-        totalAmountPaid: totalPaid,
+        totalAmountPaid: finalTotalAmountPaid, // Use the accumulated total
       };
 
       // Save the user to the database
@@ -258,7 +261,7 @@ const UserList = () => {
           }}
         >
           <div style={{ flex: 2 }}>Name</div>
-          <div style={{ flex: 1 }}>Phone</div>
+          {/* <div style={{ flex: 1 }}>Phone</div> */}
           <div style={{ flex: 1 }}>Total Amount</div>
           <div style={{ flex: 2 }}>Add Payment</div>
           <div style={{ flex: 1 }}>Actions</div>
@@ -282,9 +285,9 @@ const UserList = () => {
                 </h5>
               </div>
               {/* User Phone */}
-              <div style={{ flex: 1 }}>
+              {/* <div style={{ flex: 1 }}>
                 <p>{user.phoneNumber}</p>
-              </div>
+              </div> */}
               {/* User Total Amount */}
               <div style={{ flex: 1 }}>
                 <p>{user.totalAmountPaid}€</p>
@@ -509,7 +512,7 @@ const UserList = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Total Amount Paid</Form.Label>
+              <Form.Label>Previously Paid</Form.Label>
               <Form.Control
                 type="number"
                 value={newUser.totalAmountPaid}
