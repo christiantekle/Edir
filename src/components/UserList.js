@@ -361,7 +361,9 @@ const UserList = () => {
 
               {/* User Total Amount */}
               <div style={{ flex: 1 }}>
-                <p>{user.totalAmountPaid}€</p>
+                <p>
+                  <strong>{user.totalAmountPaid}€</strong>
+                </p>
               </div>
               {/* Add Payment */}
 
@@ -740,7 +742,7 @@ const UserList = () => {
           <Modal.Title>Confirm Payment</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Are you sure you want to toggle the payment status for{" "}
+          Are you sure you want to update the payment status for{" "}
           {monthToToggle.month} {monthToToggle.year}?
         </Modal.Body>
         <Modal.Footer>
