@@ -37,6 +37,7 @@ const UserList = () => {
   const [currentUser, setCurrentUser] = useState(null); // being edited
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedYears, setExpandedYears] = useState({}); // Track the expanded year
+  const [expandedUsers, setExpandedUsers] = useState({}); // Track the expanded user
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -44,7 +45,18 @@ const UserList = () => {
     userType: "single",
     monthsPaid: generateMonthsPaid(2024, 2030),
     totalAmountPaid: 0,
+    street: "",
+    zipcode: "",
+    city: "",
   });
+  const [showConfirmation, setShowConfirmation] = useState(false); // Confirmation modal for payment toggle
+  const [monthToToggle, setMonthToToggle] = useState({
+    year: null,
+    month: null,
+    user: null,
+  }); // Store month, year, and user for confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // Confirmation modal for delete
+  const [userToDelete, setUserToDelete] = useState(null); // Store the user to delete
 
   const MONTHS_ORDER = [
     "January",
@@ -77,19 +89,14 @@ const UserList = () => {
 
   const saveNewUser = async () => {
     try {
-      // Calculate the total amount paid based on the selected months
       const totalPaid = calculateTotal(newUser.monthsPaid, newUser.userType);
-
-      // Add the manually entered amount to the calculated total
       const finalTotalAmountPaid = (newUser.totalAmountPaid || 0) + totalPaid;
 
-      // Add the total amount to the new user object
       const userToSave = {
         ...newUser,
-        totalAmountPaid: finalTotalAmountPaid, // Use the accumulated total
+        totalAmountPaid: finalTotalAmountPaid,
       };
 
-      // Save the user to the database
       const { data: insertedUser, error } = await supabase
         .from("users")
         .insert([userToSave])
@@ -97,18 +104,18 @@ const UserList = () => {
 
       if (error) throw error;
 
-      // Update the local state with the new user
       setUsers([...users, insertedUser[0]]);
-
-      // Reset the form and close the modal
       setShowAdd(false);
       setNewUser({
         firstName: "",
         lastName: "",
         phoneNumber: "",
         userType: "single",
-        monthsPaid: generateMonthsPaid(2024, 2030), // Reset monthsPaid
+        monthsPaid: generateMonthsPaid(2024, 2030),
         totalAmountPaid: 0,
+        street: "",
+        zipcode: "",
+        city: "",
       });
     } catch (err) {
       console.error("Error adding user", err);
@@ -125,18 +132,23 @@ const UserList = () => {
     setShowAdd(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      try {
-        const { error } = await supabase.from("users").delete().eq("id", id);
-        if (error) throw error;
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
 
-        const updatedUsers = users.filter((user) => user.id !== id);
-        setUsers(updatedUsers);
-      } catch (err) {
-        console.error("Error deleting user", err);
-        alert("Error deleting user. Please try again.");
-      }
+    try {
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", userToDelete.id);
+
+      if (error) throw error;
+
+      // Update the local state
+      const updatedUsers = users.filter((user) => user.id !== userToDelete.id);
+      setUsers(updatedUsers);
+    } catch (err) {
+      console.error("Error deleting user", err);
+      alert("Error deleting user. Please try again.");
     }
   };
 
@@ -149,9 +161,13 @@ const UserList = () => {
           lastName: currentUser.lastName,
           phoneNumber: currentUser.phoneNumber,
           totalAmountPaid: currentUser.totalAmountPaid,
+          street: currentUser.street,
+          zipcode: currentUser.zipcode,
+          city: currentUser.city,
         })
         .eq("id", currentUser.id)
         .select();
+
       if (error) throw error;
 
       const updatedUsers = users.map((user) =>
@@ -175,7 +191,16 @@ const UserList = () => {
     );
   });
 
-  const toggleMonthPayment = async (user, year, month) => {
+  const handleMonthClick = (user, year, month) => {
+    // Store the month, year, and user in state
+    setMonthToToggle({ year, month, user });
+    // Show the confirmation modal
+    setShowConfirmation(true);
+  };
+
+  const confirmToggleMonthPayment = async () => {
+    const { user, year, month } = monthToToggle;
+
     // Clone the existing `monthsPaid` object for immutability
     const updatedMonthsPaid = { ...user.monthsPaid };
 
@@ -238,6 +263,13 @@ const UserList = () => {
 
   const totalPaid = users.reduce((sum, user) => sum + user.totalAmountPaid, 0);
 
+  const toggleUserDetails = (userId) => {
+    setExpandedUsers((prev) => ({
+      ...prev,
+      [userId]: !prev[userId], // Toggle the expanded state for this user
+    }));
+  };
+
   return (
     <div>
       <Button variant="success" onClick={handleAdd} className="ms-auto d-block">
@@ -251,7 +283,7 @@ const UserList = () => {
         {/* Search Input */}
         <input
           type="text"
-          placeholder="Search users by name, phone..."
+          placeholder="Search users by name..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="form-control my-3"
@@ -287,15 +319,46 @@ const UserList = () => {
               }}
             >
               {/* User Name */}
-              <div style={{ flex: 2 }}>
-                <h5>
+              <div style={{ flex: 2, marginRight: "2rem" }}>
+                <h5
+                  style={{
+                    margin: 0,
+                    borderBottom: "1px dotted #ccc",
+                    width: "fit-content",
+                  }}
+                  onClick={() => toggleUserDetails(user.id)}
+                >
                   {user.firstName} {user.lastName}
                 </h5>
+                {/* Expandable Details */}
+                {expandedUsers[user.id] && (
+                  <div
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem",
+                      backgroundColor: "#f9f9f9",
+                      borderRadius: "5px",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <p>
+                      <strong>Full Name:</strong> {user.firstName}{" "}
+                      {user.lastName}
+                    </p>
+                    <p>
+                      <strong>Status:</strong> {user.userType}
+                    </p>
+                    <p>
+                      <strong>Phone Number:</strong> {user.phoneNumber}
+                    </p>
+                    <p>
+                      <strong>Address:</strong> {user.street}, {user.zipcode}{" "}
+                      {user.city}
+                    </p>
+                  </div>
+                )}
               </div>
-              {/* User Phone */}
-              {/* <div style={{ flex: 1 }}>
-                <p>{user.phoneNumber}</p>
-              </div> */}
+
               {/* User Total Amount */}
               <div style={{ flex: 1 }}>
                 <p>{user.totalAmountPaid}€</p>
@@ -359,9 +422,7 @@ const UserList = () => {
                               fontSize: "0.8rem",
                               cursor: "pointer",
                             }}
-                            onClick={() =>
-                              toggleMonthPayment(user, year, month)
-                            }
+                            onClick={() => handleMonthClick(user, year, month)}
                           >
                             {month.slice(0, 3)}
                           </span>
@@ -376,7 +437,13 @@ const UserList = () => {
                 <Button variant="warning" onClick={() => handleEdit(user)}>
                   <FaEdit />
                 </Button>
-                <Button variant="danger" onClick={() => handleDelete(user.id)}>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setUserToDelete(user); // Store the user to delete
+                    setShowDeleteConfirmation(true); // Show the confirmation modal
+                  }}
+                >
                   <FaTrash />
                 </Button>
               </div>
@@ -429,9 +496,40 @@ const UserList = () => {
                   setNewUser({ ...newUser, userType: e.target.value })
                 }
               >
-                <option value="single">Single</option>
-                <option value="family">Family</option>
+                <option value="Single">Single</option>
+                <option value="Family">Family</option>
               </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Street</Form.Label>
+              <Form.Control
+                type="text"
+                value={newUser.street}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, street: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Zipcode</Form.Label>
+              <Form.Control
+                type="text"
+                value={newUser.zipcode}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, zipcode: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>City</Form.Label>
+              <Form.Control
+                type="text"
+                value={newUser.city}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, city: e.target.value })
+                }
+              />
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -582,6 +680,37 @@ const UserList = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
+              <Form.Label>Street</Form.Label>
+              <Form.Control
+                type="text"
+                value={currentUser?.street || ""}
+                onChange={(e) =>
+                  setCurrentUser({ ...currentUser, street: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Zipcode</Form.Label>
+              <Form.Control
+                type="text"
+                value={currentUser?.zipcode || ""}
+                onChange={(e) =>
+                  setCurrentUser({ ...currentUser, zipcode: e.target.value })
+                }
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>City</Form.Label>
+              <Form.Control
+                type="text"
+                value={currentUser?.city || ""}
+                onChange={(e) =>
+                  setCurrentUser({ ...currentUser, city: e.target.value })
+                }
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
               <Form.Label>Total Amount Paid</Form.Label>
               <Form.Control
                 type="number"
@@ -602,6 +731,66 @@ const UserList = () => {
           </Button>
           <Button variant="primary" onClick={saveEdit}>
             Save Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      {/* Confirmation Modal for Payment Toggle */}
+      <Modal show={showConfirmation} onHide={() => setShowConfirmation(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Payment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to toggle the payment status for{" "}
+          {monthToToggle.month} {monthToToggle.year}?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowConfirmation(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowConfirmation(false);
+              confirmToggleMonthPayment();
+            }}
+          >
+            Confirm
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      {/* Confirmation Modal for Delete */}
+      <Modal
+        show={showDeleteConfirmation}
+        onHide={() => setShowDeleteConfirmation(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Delete</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to delete the user{" "}
+          <strong>
+            {userToDelete?.firstName} {userToDelete?.lastName}
+          </strong>
+          ?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowDeleteConfirmation(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setShowDeleteConfirmation(false);
+              confirmDeleteUser();
+            }}
+          >
+            Delete
           </Button>
         </Modal.Footer>
       </Modal>

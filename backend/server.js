@@ -44,11 +44,35 @@ app.get("/users", async (req, res) => {
 //POST route to add a user
 app.post("/users", async (req, res) => {
   try {
-    const { firstName, lastName, phoneNumber, totalAmountPaid } = req.body;
+    const {
+      firstName,
+      lastName,
+      phoneNumber,
+      userType,
+      monthsPaid,
+      totalAmountPaid,
+      street,
+      zipcode,
+      city,
+    } = req.body;
+
     const { data: newUser, error } = await supabase
       .from("users")
-      .insert([{ firstName, lastName, phoneNumber, totalAmountPaid }])
+      .insert([
+        {
+          firstName,
+          lastName,
+          phoneNumber,
+          userType,
+          monthsPaid,
+          totalAmountPaid,
+          street,
+          zipcode,
+          city,
+        },
+      ])
       .select();
+
     if (error) throw error;
     res.status(201).json(newUser[0]);
   } catch (err) {
@@ -60,12 +84,34 @@ app.post("/users", async (req, res) => {
 app.put("/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, phoneNumber, totalAmountPaid } = req.body;
+    const {
+      firstName,
+      lastName,
+      phoneNumber,
+      userType,
+      monthsPaid,
+      totalAmountPaid,
+      street,
+      zipcode,
+      city,
+    } = req.body;
+
     const { data: updatedUser, error } = await supabase
       .from("users")
-      .update({ firstName, lastName, phoneNumber, totalAmountPaid })
+      .update({
+        firstName,
+        lastName,
+        phoneNumber,
+        userType,
+        monthsPaid,
+        totalAmountPaid,
+        street,
+        zipcode,
+        city,
+      })
       .eq("id", id)
       .select();
+
     if (error) throw error;
     res.json(updatedUser[0]);
   } catch (err) {
