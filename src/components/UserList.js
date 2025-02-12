@@ -43,6 +43,7 @@ const UserList = () => {
     lastName: "",
     phoneNumber: "",
     userType: "single",
+    spouse: "",
     monthsPaid: generateMonthsPaid(2024, 2030),
     totalAmountPaid: 0,
     street: "",
@@ -95,6 +96,7 @@ const UserList = () => {
       const userToSave = {
         ...newUser,
         totalAmountPaid: finalTotalAmountPaid,
+        spouse: newUser.userType === "Family" ? newUser.spouse : null,
       };
 
       const { data: insertedUser, error } = await supabase
@@ -111,6 +113,7 @@ const UserList = () => {
         lastName: "",
         phoneNumber: "",
         userType: "single",
+        spouse: "",
         monthsPaid: generateMonthsPaid(2024, 2030),
         totalAmountPaid: 0,
         street: "",
@@ -159,6 +162,7 @@ const UserList = () => {
         .update({
           firstName: currentUser.firstName,
           lastName: currentUser.lastName,
+          spouse: currentUser.userType === "Family" ? currentUser.spouse : null,
           phoneNumber: currentUser.phoneNumber,
           totalAmountPaid: currentUser.totalAmountPaid,
           street: currentUser.street,
@@ -300,11 +304,11 @@ const UserList = () => {
             borderBottom: "2px solid #ddd",
           }}
         >
-          <div style={{ flex: 2 }}>Name</div>
-          {/* <div style={{ flex: 1 }}>Phone</div> */}
+          <div style={{ flex: 1.5 }}>Full Name</div>
+          <div style={{ flex: 1 }}>Spouse</div>
           <div style={{ flex: 1 }}>Total Amount</div>
-          <div style={{ flex: 2 }}>Add Payment</div>
-          <div style={{ flex: 1 }}>Actions</div>
+          <div style={{ flex: 1.5 }}>Add Payment</div>
+          <div style={{ flex: 0.3 }}>Actions</div>
         </div>
 
         {/* Users List */}
@@ -319,7 +323,7 @@ const UserList = () => {
               }}
             >
               {/* User Name */}
-              <div style={{ flex: 2, marginRight: "2rem" }}>
+              <div style={{ flex: 1.5 }}>
                 <h5
                   style={{
                     margin: 0,
@@ -359,18 +363,23 @@ const UserList = () => {
                 )}
               </div>
 
+              {/* Spouse Name */}
+              <div style={{ flex: 1 }}>
+                <p>{user.spouse}</p>
+              </div>
+
               {/* User Total Amount */}
               <div style={{ flex: 1 }}>
-                <p>
+                <p style={{ paddingLeft: "0.5rem" }}>
                   <strong>{user.totalAmountPaid}€</strong>
                 </p>
               </div>
               {/* Add Payment */}
 
-              <div style={{ flex: 2 }}>
+              <div style={{ flex: 1.5 }}>
                 {/* Years */}
-                {["2024", "2025"].map((year) => (
-                  <div key={year} style={{ marginBottom: "1rem" }}>
+                {["2024", "2025", "2026"].map((year) => (
+                  <div key={year} style={{ marginBottom: "0.5rem" }}>
                     {/* Year Header */}
                     <button
                       onClick={() =>
@@ -405,8 +414,8 @@ const UserList = () => {
                         style={{
                           display: "flex",
                           flexWrap: "wrap",
-                          gap: "0.5rem",
-                          marginTop: "0.5rem",
+                          gap: "0.2rem",
+                          marginTop: "0.3rem",
                         }}
                       >
                         {MONTHS_ORDER.map((month) => (
@@ -435,7 +444,7 @@ const UserList = () => {
                 ))}
               </div>
 
-              <div style={{ flex: 1 }} className="d-flex gap-2">
+              <div style={{ flex: 0.3 }} className="d-flex flex-column gap-2">
                 <Button variant="warning" onClick={() => handleEdit(user)}>
                   <FaEdit />
                 </Button>
@@ -503,6 +512,20 @@ const UserList = () => {
               </Form.Select>
             </Form.Group>
 
+            {/* Conditional Spouse Field */}
+            {newUser.userType === "Family" && (
+              <Form.Group className="mb-3">
+                <Form.Label>Spouse Name</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={newUser.spouse || ""}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, spouse: e.target.value })
+                  }
+                />
+              </Form.Group>
+            )}
+
             <Form.Group className="mb-3">
               <Form.Label>Street</Form.Label>
               <Form.Control
@@ -536,7 +559,7 @@ const UserList = () => {
 
             <Form.Group className="mb-3">
               <Form.Label>Months Paid</Form.Label>
-              {["2024", "2025"].map((year) => (
+              {["2024", "2025", "2026"].map((year) => (
                 <div key={year} style={{ marginBottom: "1rem" }}>
                   {/* Year Header */}
                   <button
@@ -667,6 +690,20 @@ const UserList = () => {
                 }
               />
             </Form.Group>
+            {/* Conditional Spouse Field */}
+            {currentUser?.userType === "Family" && (
+              <Form.Group className="mb-3">
+                <Form.Label>Spouse Name</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={currentUser.spouse || ""}
+                  onChange={(e) =>
+                    setCurrentUser({ ...currentUser, spouse: e.target.value })
+                  }
+                />
+              </Form.Group>
+            )}
+
             <Form.Group className="mb-3">
               <Form.Label>Phone Number</Form.Label>
               <Form.Control
