@@ -38,6 +38,10 @@ const UserList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedYears, setExpandedYears] = useState({}); // Track the expanded year
   const [expandedUsers, setExpandedUsers] = useState({}); // Track the expanded user
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+  const [showUnpaidUsersModal, setShowUnpaidUsersModal] = useState(false);
+  const [unpaidUsers, setUnpaidUsers] = useState([]);
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -88,7 +92,29 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
+  const validateNewUser = () => {
+    if (!newUser.firstName.trim()) {
+      setValidationMessage("First Name is required.");
+      return false;
+    }
+    if (!newUser.lastName.trim()) {
+      setValidationMessage("Last Name is required.");
+      return false;
+    }
+    if (!newUser.phoneNumber.trim()) {
+      setValidationMessage("Phone Number is required.");
+      return false;
+    }
+    return true;
+  };
+
   const saveNewUser = async () => {
+    // Validate mandatory fields
+    if (!validateNewUser()) {
+      setShowValidationModal(true); // Show validation modal if validation fails
+      return;
+    }
+
     try {
       const totalPaid = calculateTotal(newUser.monthsPaid, newUser.userType);
       const finalTotalAmountPaid = (newUser.totalAmountPaid || 0) + totalPaid;
@@ -279,10 +305,63 @@ const UserList = () => {
       <Button variant="success" onClick={handleAdd} className="ms-auto d-block">
         Add New User
       </Button>
-      <p className="mt-3">
-        <strong>Total Paid by All Users: </strong>
-        {totalPaid} Euros
-      </p>
+      <div className="summary-section mb-4">
+        <p>
+          <strong>Total Paid by All Users: </strong>
+          {totalPaid} Euros
+        </p>
+        <div className="d-flex gap-4">
+          <div>
+            <strong>Total Users:</strong> {users.length}
+          </div>
+          <div>
+            <strong>Single:</strong>{" "}
+            {users.filter((user) => user.userType === "single").length}
+          </div>
+          <div>
+            <strong>Family:</strong>{" "}
+            {users.filter((user) => user.userType === "Family").length}
+          </div>
+        </div>
+      </div>
+      <Button
+        variant="warning"
+        onClick={() => {
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear().toString();
+          const currentMonth = MONTHS_ORDER[currentDate.getMonth()]; // Get the current month name
+
+          // Filter users who haven't paid for the current month
+          const unpaid = users.filter(
+            (user) => !user.monthsPaid[currentYear]?.[currentMonth]
+          );
+          setUnpaidUsers(unpaid);
+          setShowUnpaidUsersModal(true);
+        }}
+        className="mb-3"
+      >
+        This Month Unpaid...
+      </Button>
+
+      <Button
+        variant="warning"
+        onClick={() => {
+          const previousYear = (new Date().getFullYear() - 1).toString(); // Get the previous year
+
+          // Filter users who missed any month in the previous year
+          const unpaidPreviousYear = users.filter((user) => {
+            const monthsPaid = user.monthsPaid[previousYear] || {};
+            return Object.values(monthsPaid).some((paid) => !paid); // Check if any month is unpaid
+          });
+
+          setUnpaidUsers(unpaidPreviousYear);
+          setShowUnpaidUsersModal(true);
+        }}
+        className="mb-3 ms-2" // Add margin to separate from the other button
+      >
+        Prev Year Unpaid...
+      </Button>
+
       <div>
         {/* Search Input */}
         <input
@@ -470,7 +549,7 @@ const UserList = () => {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>First Name</Form.Label>
+              <Form.Label>First Name*</Form.Label>
               <Form.Control
                 type="text"
                 value={newUser.firstName}
@@ -480,7 +559,7 @@ const UserList = () => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Last Name</Form.Label>
+              <Form.Label>Last Name*</Form.Label>
               <Form.Control
                 type="text"
                 value={newUser.lastName}
@@ -490,7 +569,7 @@ const UserList = () => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Phone Number</Form.Label>
+              <Form.Label>Phone Number*</Form.Label>
               <Form.Control
                 type="text"
                 value={newUser.phoneNumber}
@@ -507,7 +586,7 @@ const UserList = () => {
                   setNewUser({ ...newUser, userType: e.target.value })
                 }
               >
-                <option value="Single">Single</option>
+                <option value="single">single</option>
                 <option value="Family">Family</option>
               </Form.Select>
             </Form.Group>
@@ -515,7 +594,7 @@ const UserList = () => {
             {/* Conditional Spouse Field */}
             {newUser.userType === "Family" && (
               <Form.Group className="mb-3">
-                <Form.Label>Spouse Name</Form.Label>
+                <Form.Label>Spouse Name*</Form.Label>
                 <Form.Control
                   type="text"
                   value={newUser.spouse || ""}
@@ -663,6 +742,85 @@ const UserList = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <Modal
+        show={showValidationModal}
+        onHide={() => setShowValidationModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Validation Error</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{validationMessage}</Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowValidationModal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Unpaid Users Modal */}
+      <Modal
+        show={showUnpaidUsersModal}
+        onHide={() => setShowUnpaidUsersModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Users Who Haven't Paid The Previous Year</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {unpaidUsers.length > 0 ? (
+            <ul>
+              {unpaidUsers.map((user) => (
+                <li key={user.id}>
+                  {user.firstName} {user.lastName} - {user.phoneNumber}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>All users have paid for the current month.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowUnpaidUsersModal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={showUnpaidUsersModal}
+        onHide={() => setShowUnpaidUsersModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {unpaidUsers.length > 0 && unpaidUsers[0].monthsPaid
+              ? "Pending From Last Year"
+              : "Users Who Haven't Paid Any Month in the Previous Year"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {unpaidUsers.length > 0 ? (
+            <ul>
+              {unpaidUsers.map((user) => (
+                <li key={user.id}>
+                  {user.firstName} {user.lastName} - {user.phoneNumber}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>
+              {unpaidUsers.length === 0
+                ? "All users have paid for the selected period."
+                : "No users found."}
+            </p>
+          )}
+        </Modal.Body>
+      </Modal>
+
       {/* Edit user */}
       <Modal show={showEdit} onHide={() => setShowEdit(false)}>
         <Modal.Header closeButton>
