@@ -40,8 +40,10 @@ const UserList = () => {
   const [expandedUsers, setExpandedUsers] = useState({}); // Track the expanded user
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
+  const [showDuplicateUserModal, setShowDuplicateUserModal] = useState(false);
   const [showUnpaidUsersModal, setShowUnpaidUsersModal] = useState(false);
   const [unpaidUsers, setUnpaidUsers] = useState([]);
+
   const [newUser, setNewUser] = useState({
     firstName: "",
     lastName: "",
@@ -108,10 +110,24 @@ const UserList = () => {
     return true;
   };
 
+  const checkForDuplicateUser = (firstName, lastName) => {
+    return users.some(
+      (user) =>
+        user.firstName.toLowerCase() === firstName.toLowerCase() &&
+        user.lastName.toLowerCase() === lastName.toLowerCase()
+    );
+  };
+
   const saveNewUser = async () => {
     // Validate mandatory fields
     if (!validateNewUser()) {
       setShowValidationModal(true); // Show validation modal if validation fails
+      return;
+    }
+
+    // Check for duplicate user
+    if (checkForDuplicateUser(newUser.firstName, newUser.lastName)) {
+      setShowDuplicateUserModal(true); // Show duplicate user modal
       return;
     }
 
@@ -757,6 +773,40 @@ const UserList = () => {
             onClick={() => setShowValidationModal(false)}
           >
             Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Duplicate User Confirmation Modal */}
+      <Modal
+        show={showDuplicateUserModal}
+        onHide={() => setShowDuplicateUserModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Duplicate User</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          A user with the name{" "}
+          <strong>
+            {newUser.firstName} {newUser.lastName}
+          </strong>{" "}
+          already exists. Are you sure you want to add this user?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowDuplicateUserModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowDuplicateUserModal(false);
+              saveNewUser(); // Proceed with saving the user
+            }}
+          >
+            Confirm
           </Button>
         </Modal.Footer>
       </Modal>
