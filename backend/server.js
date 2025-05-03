@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const { createClient } = require("@supabase/supabase-js");
 const cors = require("cors");
+const cron = require("node-cron");
+const sgMail = require("@sendgrid/mail");
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -20,6 +22,10 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
+// Initialize SendGrid
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// Authentication middleware
 app.use(async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   const { data, error } = await supabase.auth.getUser(token);
@@ -28,6 +34,51 @@ app.use(async (req, res, next) => {
   }
   req.user = data.user; //attach user info to the req obj
   next();
+});
+
+// Endpoint to generate and email weekly report
+app.get("/generate-weekly-report", async (req, res) => {
+  try {
+    // Query users from the past week
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, firstName, lastName, totalAmountPaid, created_at")
+      .gte(
+        "created_at",
+        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      )
+      .lte("created_at", new Date().toISOString());
+
+    if (error) throw error;
+
+    // Generate CSV
+    const csvContent = generateCsv(users);
+
+    // Email configuration
+    const msg = {
+      to: process.env.REPORT_EMAIL, // e.g., "recipient@example.com"
+      from: process.env.SENDER_EMAIL, // e.g., "no-reply@yourdomain.com"
+      subject: "Weekly Users Report",
+      text: "Please find the weekly users report attached.",
+      attachments: [
+        {
+          content: Buffer.from(csvContent).toString("base64"),
+          filename: `weekly_report_${
+            new Date().toISOString().split("T")[0]
+          }.csv`,
+          type: "text/csv",
+          disposition: "attachment",
+        },
+      ],
+    };
+
+    // Send email
+    await sgMail.send(msg);
+
+    res.json({ message: "Weekly report generated and emailed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 //API routes for CRUD
