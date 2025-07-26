@@ -1,54 +1,160 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import UserList from "./components/UserList";
+import UserListReadOnly from "./components/UserListReadOnly";
 import LoginPage from "./components/LoginPage";
 import { createClient } from "@supabase/supabase-js";
 
-//Initialize a new Supabase client
+// Supabase client
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
 const App = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // The logged-in user
+  const [role, setRole] = useState(null); // Their role: admin / viewer
+  const [loading, setLoading] = useState(true); // Loading state
 
   useEffect(() => {
-    //Check if the user is already logged in
-    const session = supabase.auth.getSession();
-    session.then(({ data: { session } }) => {
-      if (session) setUser(session.user);
-    });
+    const loadUserAndRole = async () => {
+      setLoading(true);
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error("Error getting session:", sessionError.message);
+          setUser(null);
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          const user = session.user;
+          setUser(user);
+
+          // Fetch the role from user_profiles
+          const { data: profile, error: roleError } = await supabase
+            .from("user_profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+
+          if (roleError) {
+            console.error("Error loading role:", roleError.message);
+            setRole(null); // Handle case where role fetch fails
+          } else {
+            setRole(profile?.role || null); // Set role or null if no profile
+          }
+        } else {
+          setUser(null);
+          setRole(null);
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err.message);
+        setUser(null);
+        setRole(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Initial load
+    loadUserAndRole();
+
+    // Subscribe to auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          setUser(session.user);
+          loadUserAndRole(); // Reload role on sign-in
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setRole(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    // Cleanup listener on component unmount
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setRole(null);
+    } catch (err) {
+      console.error("Error signing out:", err.message);
+    }
   };
 
+  if (loading) return <p>Loading...</p>;
+
   return (
-    <div className="container mt-5">
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0 }}>
       {user ? (
         <>
           <h1
             style={{
-              fontFamily: "'Poppins', sans-serif", // Use a modern font
-              fontSize: "2.5rem", // Larger font size
-              fontWeight: "600", // Semi-bold
-              color: "#00204f", // Bootstrap primary color
-              textAlign: "center", // Center the title
-              marginTop: "1rem", // Add some spacing
-              marginBottom: "1.5rem", // Add some spacing
-              textShadow: "2px 2px 4px rgba(0, 0, 0, 0.2)", // Subtle shadow
-              letterSpacing: "1px", // Slightly spaced letters
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: "2.5rem",
+              fontWeight: "700",
+              color: "#ffffff",
+              textAlign: "center",
+              margin: "0",
+              backgroundColor: "rgb(17, 59, 73)",
+              padding: "2rem",
+              textTransform: "uppercase",
+              lineHeight: "1.5",
+              width: "100vw",
+              position: "relative",
+              left: "50%",
+              right: "50%",
+              marginLeft: "-50vw",
+              marginRight: "-50vw",
             }}
           >
-            Hibret Be Geta
+            HIBRET BE GETA
+            <br />
+            ሕብረት በጌታ
+            <div
+              style={{
+                borderBottom: "2px dotted #ffffff",
+                marginTop: "0.5rem",
+                width: "50%",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            />
           </h1>
-          <button className="btn btn-danger" onClick={handleLogout}>
-            Logout
-          </button>
-          <UserList />
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              padding: "15px",
+              marginTop: "1rem",
+            }}
+          >
+            <button className="btn btn-danger mb-4" onClick={handleLogout}>
+              Logout
+            </button>
+
+            {role === "admin" ? (
+              <UserList />
+            ) : role === "viewer" ? (
+              <UserListReadOnly />
+            ) : (
+              <p>Loading role...</p>
+            )}
+          </div>
         </>
       ) : (
         <LoginPage onLogin={setUser} />
